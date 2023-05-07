@@ -16,16 +16,14 @@
       v-on:select="menuChanged"
       class="mt-6 mx-auto"
     />
-    <div v-show="menuSelected == 'ASR'">
-      <ASRDemoSheet
-        class="mt-3"
-      ></ASRDemoSheet>
-    </div>
-    <div v-show="menuSelected == 'TTS'">
-      <TTSDemoSheet
-        class="mt-3"
-      ></TTSDemoSheet>
-    </div>
+    <v-sheet class="mb-10">
+      <div v-show="menuSelected == 'ASR'">
+        <ASRDemoSheet class="mt-3"></ASRDemoSheet>
+      </div>
+      <div v-show="menuSelected == 'TTS'">
+        <TTSDemoSheet class="mt-3"></TTSDemoSheet>
+      </div>
+    </v-sheet>
   </v-container>
 </template>
 <script>
@@ -54,6 +52,6 @@ export default {
         this.menuSelected = e;
       }
     },
-  }
+  },
 };
 </script>

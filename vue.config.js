@@ -3,5 +3,5 @@ module.exports = defineConfig({
   transpileDependencies: [
     'vuetify'
   ],
-  publicPath: 'https://masao-someki.github.io/espnet_onnx_demo/'
+  // publicPath: 'https://masao-someki.github.io/espnet_onnx_demo/'
 })
