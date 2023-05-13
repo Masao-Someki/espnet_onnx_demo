@@ -11,7 +11,12 @@
           <span class="text-h6"> Select model </span>
         </v-col>
         <v-col cols="7">
-          <v-select v-model="model" :items="models" dense></v-select>
+          <v-select
+            v-model="model"
+            :items="models"
+            :error="selectError"
+            dense
+          ></v-select>
         </v-col>
         <v-col cols="2">
           <v-btn
@@ -31,23 +36,31 @@
           class="py-auto"
           height="100%"
         >
-          <span class="text-h6"> Upload audio </span></v-col
+          <div class="my-auto">
+            <span class="text-h6"> Upload audio </span>
+          </div></v-col
         >
         <v-col cols="7">
-          <v-file-input
-            label="Select your audio file"
-            prepend-icon="mdi-waveform"
-            dense
-            show-size
-            accept="audio/*"
-          ></v-file-input>
+          <audio-recorder
+            :attempts="3"
+            :time="1"
+            sample-rate="16000"
+            :show-download-button="false"
+            :show-upload-button="false"
+            format="mp3"
+            :select-record="selectRecord"
+            :after-recording="afterRecord"
+            style="box-shadow: none; background: none"
+          />
         </v-col>
-        <v-col cols="2">
+        <v-col cols="2" class="d-flex flex-column">
+          <v-spacer />
           <v-btn
             @click="runModel"
             outlined
             width="100%"
             :loading="ASRLoadingFlag"
+            class="mt-auto"
           >
             Run
           </v-btn>
@@ -90,24 +103,31 @@
         </v-col>
       </v-row>
     </v-sheet>
+    <v-alert
+      :value="showAlert"
+      :type="barType"
+      colored-border
+      border="top"
+      elevation="2"
+    >
+      {{ message }}</v-alert
+    >
   </v-container>
 </template>
 <script>
+import axios from "axios";
+
 export default {
   name: "ASRDemoSheet",
   data: () => ({
     model: "",
-    models: [
-      "kamo-naoyuki/mini_an4_asr_train_raw_bpe_valid.acc.best",
-      "Shinji Watanabe/librispeech_asr_train_asr_transformer_e18_raw_bpe_sp_valid.acc.best",
-      "kamo-naoyuki/wsj",
-    ],
+    models: ["pyf98/librispeech_conformer_hop_length160"],
     modelInfo: {
-      "kamo-naoyuki/mini_an4_asr_train_raw_bpe_valid.acc.best": [
+      "pyf98/librispeech_conformer_hop_length160": [
         {
           name: "url",
           value:
-            "https://huggingface.co/espnet/kamo-naoyuki-mini_an4_asr_train_raw_bpe_valid.acc.best",
+            "https://huggingface.co/pyf98/librispeech_conformer_hop_length160",
         },
         {
           name: "encoder",
@@ -118,71 +138,125 @@ export default {
           value: "Transformer",
         },
       ],
-      "Shinji Watanabe/librispeech_asr_train_asr_transformer_e18_raw_bpe_sp_valid.acc.best":
-        [
-          {
-            name: "url",
-            value:
-              "https://huggingface.co/espnet/shinji-watanabe-librispeech_asr_train_asr_transformer_e18_raw_bpe_sp_valid.acc.best",
-          },
-          {
-            name: "encoder",
-            value: "Transformer",
-          },
-          {
-            name: "decoder",
-            value: "Transformer",
-          },
-        ],
-      "kamo-naoyuki/wsj": [
-        {
-          name: "url",
-          value: "https://huggingface.co/espnet/kamo-naoyuki_wsj",
-        },
-        {
-          name: "encoder",
-          value: "Transformer",
-        },
-        {
-          name: "decoder",
-          value: "Transformer",
-        },
-      ],
     },
     loadingFlag: false,
     text: "",
     ASRLoadingFlag: false,
+    showAlert: false,
+    message: "",
+    barType: "success",
+    selectError: false,
+    audioFile: "",
+    audioError: false,
+    soundSrc: [],
+    record: null,
   }),
   methods: {
+    hide_alert: function () {
+      // `event` is the native DOM event
+      window.setInterval(() => {
+        this.showAlert = false;
+      }, 3000);
+    },
     loadModel() {
       this.loadingFlag = true;
-      // axios
-      // .get(this.modelInfo[this.model][0].value)
-      // .then((response) => {
-      //     this.modelInfo[this.model][0].value = response.data.url;
-      //     this.modelInfo[this.model][1].value = response.data.encoder;
-      //     this.modelInfo[this.model][2].value = response.data.decoder;
-      //     this.loadingFlag = false;
-      //   })
-      // .catch((error) => {
-      //     this.loadingFlag = false;
-      //     console.log(error);
-      //   });
+      if (this.model === "") {
+        this.showAlert = true;
+        this.selectError = true;
+        this.message = "Please select a model";
+        this.loadingFlag = false;
+        this.barType = "error";
+        this.hide_alert();
+        return;
+      }
+      this.selectError = false;
+      axios
+        .get("/api/asr/load_model", {
+          params: {
+            model_name: this.model,
+          },
+        })
+        .then(() => {
+          this.message = "Successfully loaded model";
+          this.barType = "success";
+          this.loadingFlag = false;
+          this.alert = true;
+          this.modelLoaded = true;
+          this.showAlert = true;
+          this.hide_alert();
+        })
+        .catch((error) => {
+          this.message = "Error happened while loading model";
+          this.loadingFlag = false;
+          this.alert = true;
+          this.barType = "error";
+          this.showAlert = true;
+          this.hide_alert();
+          console.log(error);
+        });
     },
     runModel() {
       this.ASRLoadingFlag = true;
-            // axios
-            // .post(this.modelInfo[this.model][0].value, {
-            //     text: this.text,
-            //   })
-            // .then((response) => {
-            //     this.ASRLoadingFlag = false;
-            //   })
-            // .catch((error) => {
-            //     this.ASRLoadingFlag = false;
-            //     console.log(error);
-            //
-    }
+      // if (!this.modelLoaded) {
+      //   this.showAlert = true;
+      //   this.selectError = true;
+      //   this.message = "Please load a model before generating audio.";
+      //   this.ASRLoadingFlag = false;
+      //   this.barType = "error";
+      //   this.hide_alert();
+      //   return;
+      // }
+      if (!this.record) {
+        this.showAlert = true;
+        this.audioError = true;
+        this.message = "Please record at least one audio.";
+        this.ASRLoadingFlag = false;
+        this.barType = "error";
+        this.hide_alert();
+        return;
+      }
+
+      let formData = new FormData();
+      formData.append("audio", this.record.blob, `${this.record.filename}.mp3`);
+
+      axios
+        .post("/api/asr/recognize", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        })
+        .then((res) => {
+          this.message = "Recognition finished.";
+          this.barType = "success";
+          this.ASRLoadingFlag = false;
+          this.alert = true;
+          this.text = res.data.text;
+          this.hide_alert();
+        })
+        .catch((error) => {
+          this.message = "Error happened while executing model";
+          this.ASRLoadingFlag = false;
+          this.alert = true;
+          this.barType = "error";
+          this.hide_alert();
+          console.log(error);
+        });
+    },
+    selectRecord(r) {
+      this.record = r;
+    },
+    afterRecord(r) {
+      this.record = r;
+    },
   },
 };
 </script>
+<style>
+.ar-records {
+  height: auto !important;
+}
+
+.ar-records__record--selected {
+  border: 1px solid #1f1e33 !important;
+}
+</style>

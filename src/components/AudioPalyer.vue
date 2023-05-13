@@ -8,8 +8,8 @@
       </v-col>
       <v-col cols="1" class="pa-2" style="text-align: center;" title="Play/Pause">
         <v-btn icon @click="playing = !playing" >
-          <v-icon v-show="playing">mdi-play</v-icon>
-          <v-icon v-show="!playing">mdi-pause</v-icon>
+          <v-icon v-show="!playing">mdi-play</v-icon>
+          <v-icon v-show="playing">mdi-pause</v-icon>
         </v-btn>
       </v-col>
       <v-col cols="6" class="pa-0" >
@@ -39,13 +39,13 @@
         ></v-slider>
       </v-col>
     </v-row>
-    <audio
+    <!-- <audio
       :loop="innerLoop"
-      ref="audiofile"
+      :ref="audioPath"
       :src="file"
       preload="auto"
       style="display: none"
-    ></audio>
+    ></audio> -->
   </div>
 </template>
 <script>
@@ -70,6 +70,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    audioPath: {
+      type: String,
+      default: null,
+    }
   },
   data: () => ({
     audio: undefined,
@@ -147,20 +151,22 @@ export default {
     update() {
       this.currentSeconds = parseInt(this.audio.currentTime);
     },
+    reload() {
+      this.audio = new Audio("/demo/sample.wav");
+      this.audio.addEventListener("timeupdate", this.update);
+      this.audio.addEventListener("loadeddata", this.load);
+      this.audio.addEventListener("pause", () => {
+        this.playing = false;
+      });
+      this.audio.addEventListener("play", () => {
+        this.playing = true;
+      });
+      this.playing = false;
+      this.durationSeconds = parseInt(this.audio.duration);
+    }
   },
   created() {
     this.innerLoop = this.loop;
-  },
-  mounted() {
-    this.audio = this.$el.querySelectorAll("audio")[0];
-    this.audio.addEventListener("timeupdate", this.update);
-    this.audio.addEventListener("loadeddata", this.load);
-    this.audio.addEventListener("pause", () => {
-      this.playing = false;
-    });
-    this.audio.addEventListener("play", () => {
-      this.playing = true;
-    });
   },
 };
 </script>
