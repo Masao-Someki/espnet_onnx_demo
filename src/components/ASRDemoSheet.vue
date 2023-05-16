@@ -8,15 +8,17 @@
           class="py-auto"
           height="100%"
         >
-          <span class="text-h6"> Select model </span>
+          <span class="text-h6"> Language </span>
         </v-col>
         <v-col cols="7">
-          <v-select
-            v-model="model"
+          <v-combobox
+            v-model="lang"
             :items="models"
             :error="selectError"
+            auto-select-first
             dense
-          ></v-select>
+          >
+          </v-combobox>
         </v-col>
         <v-col cols="2">
           <v-btn
@@ -86,16 +88,20 @@
           class="py-auto"
           height="100%"
         >
-          <span class="text-h6"> Model Detail </span>
+          <span class="text-h6"> Detail </span>
           <!-- <v-spacer></v-spacer> -->
         </v-col>
         <v-col cols="9">
           <v-card flat>
             <v-simple-table>
               <tbody>
-                <tr v-for="item in modelInfo[model]" :key="item.name">
+                <tr v-for="item in modelInfo[lang]" :key="item.name">
                   <td>{{ item.name }}</td>
-                  <td>{{ item.value }}</td>
+
+                  <td v-if="item.url">
+                    <a :href="item.url">{{ item.value }}</a>
+                  </td>
+                  <td v-else>{{ item.value }}</td>
                 </tr>
               </tbody>
             </v-simple-table>
@@ -116,29 +122,15 @@
 </template>
 <script>
 import axios from "axios";
+import { asr_model_info } from "../utils/ASR_models.js";
 
+console.log(asr_model_info);
 export default {
   name: "ASRDemoSheet",
   data: () => ({
-    model: "",
-    models: ["pyf98/librispeech_conformer_hop_length160"],
-    modelInfo: {
-      "pyf98/librispeech_conformer_hop_length160": [
-        {
-          name: "url",
-          value:
-            "https://huggingface.co/pyf98/librispeech_conformer_hop_length160",
-        },
-        {
-          name: "encoder",
-          value: "Conformer",
-        },
-        {
-          name: "decoder",
-          value: "Transformer",
-        },
-      ],
-    },
+    lang: "",
+    models: Object.keys(asr_model_info),
+    modelInfo: asr_model_info,
     loadingFlag: false,
     text: "",
     ASRLoadingFlag: false,
@@ -160,10 +152,10 @@ export default {
     },
     loadModel() {
       this.loadingFlag = true;
-      if (this.model === "") {
+      if (this.lang === "" || !this.models.includes(this.lang)) {
         this.showAlert = true;
         this.selectError = true;
-        this.message = "Please select a model";
+        this.message = "Please select a language from list";
         this.loadingFlag = false;
         this.barType = "error";
         this.hide_alert();
@@ -173,7 +165,7 @@ export default {
       axios
         .get("/api/asr/load_model", {
           params: {
-            model_name: this.model,
+            model_name: this.modelInfo[this.lang][1].value,
           },
         })
         .then(() => {
@@ -197,15 +189,15 @@ export default {
     },
     runModel() {
       this.ASRLoadingFlag = true;
-      // if (!this.modelLoaded) {
-      //   this.showAlert = true;
-      //   this.selectError = true;
-      //   this.message = "Please load a model before generating audio.";
-      //   this.ASRLoadingFlag = false;
-      //   this.barType = "error";
-      //   this.hide_alert();
-      //   return;
-      // }
+      if (!this.modelLoaded) {
+        this.showAlert = true;
+        this.selectError = true;
+        this.message = "Please load a model before generating audio.";
+        this.ASRLoadingFlag = false;
+        this.barType = "error";
+        this.hide_alert();
+        return;
+      }
       if (!this.record) {
         this.showAlert = true;
         this.audioError = true;
